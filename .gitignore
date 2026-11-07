@@ -1,0 +1,11 @@
+# Godot
+.godot/
+export_presets.cfg
+*.translation
+
+# Windows / editors
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.tmp
