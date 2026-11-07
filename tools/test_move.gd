@@ -18,6 +18,9 @@ func _physics_process(_delta: float) -> bool:
 
 	if frames == 5:
 		print("[test] physics engine = ", ProjectSettings.get_setting("physics/3d/physics_engine", "unset"))
+		main.bot_brain.set_physics_process(false)
+		main.bot.input = null
+		main.bot.global_position = Vector3(8, 1, -14)
 		input = ScriptedInput.new()
 		main.player.input = input
 		main.kick.input = input
@@ -51,7 +54,7 @@ func _physics_process(_delta: float) -> bool:
 		input.kick = false
 
 	if frames == 220:
-		print("[test] ball vel=", snappedf(main.ball.linear_velocity.length(), 0.01), " goals=", main.hud.goals, " shots=", main.hud.shots)
+		print("[test] ball vel=", snappedf(main.ball.linear_velocity.length(), 0.01), " score=", main.player_score, " shots=", main.hud.shots)
 
 	if frames == 250:
 		return true

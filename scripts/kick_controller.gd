@@ -15,11 +15,16 @@ signal kicked(power: float, sweet: bool)
 @export var loft_gain_deg := 4.0
 @export var cooldown := 0.25
 @export var curve_max := 7.0
+@export var debug := false
 
 var player: CharacterBody3D
 var camera: Node3D
 var ball: RigidBody3D
 var input: RefCounted
+
+var use_aim_override := false
+var aim_override := Vector3.ZERO
+var show_preview := true
 
 var charging := false
 var charge := 0.0
@@ -78,6 +83,9 @@ func _ready() -> void:
 
 
 func aim_dir() -> Vector3:
+	if use_aim_override and aim_override.length() > 0.01:
+		var flat := Vector3(aim_override.x, 0.0, aim_override.z)
+		return flat.normalized()
 	var yaw: float = camera.yaw if camera else 0.0
 	return Vector3(-sin(yaw), 0.0, -cos(yaw)).normalized()
 
@@ -85,6 +93,14 @@ func aim_dir() -> Vector3:
 func _physics_process(delta: float) -> void:
 	cooldown_timer = maxf(0.0, cooldown_timer - delta)
 	if input == null:
+		return
+
+	if player != null and (player.knocked_out > 0.0 or player.tackle_timer > 0.0):
+		charging = false
+		charge = 0.0
+		_preview.visible = false
+		_landing.visible = false
+		_was_held = input.kick_held()
 		return
 
 	var held: bool = input.kick_held()
@@ -104,7 +120,7 @@ func _physics_process(delta: float) -> void:
 
 	_was_held = held
 
-	if charging:
+	if charging and show_preview:
 		_preview.visible = true
 		_update_preview()
 	else:
@@ -122,26 +138,49 @@ func _release() -> void:
 	var to_ball := ball.global_position - player.global_position
 	var flat := Vector3(to_ball.x, 0.0, to_ball.z)
 	if flat.length() > kick_range:
+		if debug:
+			print("[kick] reject: range=", snappedf(flat.length(), 0.01))
 		return
 	if flat.length() > 0.001 and flat.normalized().dot(aim) < kick_dot:
+		if debug:
+			print("[kick] reject: cone dot=", snappedf(flat.normalized().dot(aim), 0.01))
 		return
 
-	cooldown_timer = cooldown
-	var t := charge
+	force_kick(charge, aim, curve)
+	charge = 0.0
+	curve = 0.0
+
+
+func force_kick(power_ratio: float, direction: Vector3, curve_amount: float = 0.0) -> bool:
+	## Applies a kick immediately. Used by the AI, which does not charge.
+	if ball == null or player == null:
+		return false
+
+	var to_ball := ball.global_position - player.global_position
+	var flat := Vector3(to_ball.x, 0.0, to_ball.z)
+	if flat.length() > kick_range:
+		return false
+
+	var aim := Vector3(direction.x, 0.0, direction.z)
+	if aim.length() < 0.001:
+		aim = aim_dir()
+	aim = aim.normalized()
+
+	var t := clampf(power_ratio, 0.0, 1.0)
 	var power := lerpf(min_speed, max_speed, pow(t, 0.85))
 	sweet_hit = t >= sweet_lo and t <= sweet_hi
 	if sweet_hit:
 		power *= 1.15
 
 	var loft := deg_to_rad(loft_deg + loft_gain_deg * t)
-	var direction := (aim * cos(loft) + Vector3.UP * sin(loft)).normalized()
+	var shot := (aim * cos(loft) + Vector3.UP * sin(loft)).normalized()
 
-	ball.linear_velocity = Vector3.ZERO
-	ball.angular_velocity = Vector3.ZERO
-	ball.apply_central_impulse(direction * power * ball.mass)
-	ball.curve_strength = curve * curve_max * (0.35 + t)
-	ball.angular_velocity = Vector3(curve * 6.0, -curve * 10.0, 0.0)
+	ball.sleeping = false
+	ball.linear_velocity = shot * power
+	ball.angular_velocity = Vector3(curve_amount * 6.0, -curve_amount * 10.0, 0.0)
+	ball.curve_strength = curve_amount * curve_max * (0.35 + t)
 
+	cooldown_timer = cooldown
 	player.dribble_lock = 0.3
 	kicked.emit(power, sweet_hit)
 
@@ -151,8 +190,14 @@ func _release() -> void:
 	elif t > 0.55:
 		Juice.add_shake(0.14)
 
-	charge = 0.0
-	curve = 0.0
+	if debug:
+		print("[kick] t=", snappedf(t, 0.01),
+			" power=", snappedf(power, 0.01),
+			" aim=", aim.snapped(Vector3(0.01, 0.01, 0.01)),
+			" after=", ball.linear_velocity.snapped(Vector3(0.01, 0.01, 0.01)),
+			" player=", player.global_position.snapped(Vector3(0.01, 0.01, 0.01)),
+			" ball=", ball.global_position.snapped(Vector3(0.01, 0.01, 0.01)))
+	return true
 
 
 func preview_points() -> Array:

@@ -1,8 +1,10 @@
 # ⚽ Mega Battle Football
 
 A 2v2–4v4 arcade football game where nobody dies, everyone plays at once, and the
-ball can be hit into the net with a rocket. Currently at **M1: the playable feel
-prototype** — one player, one ball, two goals and a training keeper.
+ball can be hit into the net with a rocket.
+
+**Current build: M2 — 1v1 against an AI opponent, with slide tackles and
+knockdowns.** No goalkeeper, no items yet.
 
 ![prototype screenshot](docs/screenshot.png)
 
@@ -26,9 +28,10 @@ Or open the project folder in the Godot editor and press F5.
 | Sprint | Shift | RB / RT |
 | Charge kick | Hold left mouse | Hold X |
 | Curve the kick | A / D while charging | Left stick X while charging |
+| **Slide tackle** | **Space** | **B** |
 | Aim | Move the mouse | Right stick |
 | Zoom camera | Mouse wheel | — |
-| Reset | R | — |
+| Reset match | R | — |
 | Release mouse | Esc | — |
 
 **Kick rules:** 0.75 s to full charge. 7 m/s at a tap, 24 m/s at full power.
@@ -39,15 +42,20 @@ turns red.
 ## What is already in this build
 
 - 32 × 20 m walled arena with markings, bleachers and night-stadium lighting
-- `CharacterBody3D` player: camera-relative movement, sprint with generous
+- **1v1 against an AI opponent** — it chases, dribbles at your goal, shoots and
+  slide-tackles you. It is deliberately beatable.
+- `CharacterBody3D` players: camera-relative movement, sprint with generous
   stamina (100 max, 14/s drain, 25/s regen), smooth turning
-- **Magnetic dribbling**: the ball is pulled to a point in front of your feet and
+- **Slide tackle** with a 0.45 s slide, 1.1 s cooldown, knockdown on contact and
+  a knockback that sends the victim sliding
+- **Knockdowns**: 1.7 s down, can't act, then 1 s of protection on recovery
+- **Magnetic dribbling**: the ball is held slightly ahead and to your right,
   trapped when you stand still; it breaks free when hit or kicked
 - **Charge kick** with loft, curve and screen shake
 - Dotted trajectory preview + landing ring
-- Two goals with net, posts and detection areas; score, banner, auto-reset
-- Training keeper that tracks the ball and blocks shots
-- HUD: charge meter with sweet-spot band, stamina bar, goals/shots counters
+- Two goals with net, posts and detection areas; per-team score, banner, reset
+- Shoulder-offset chase camera so the ball is never hidden behind your body
+- HUD: charge meter with sweet-spot band, stamina, tackle cooldown, score
 
 ## Tuning knobs
 
@@ -55,10 +63,11 @@ Everything that matters is an `@export` on these scripts:
 
 | File | Knobs |
 |---|---|
-| `scripts/player.gd` | walk/sprint speed, acceleration, stamina, dribble radius and grip |
+| `scripts/player.gd` | speed, acceleration, stamina, dribble radius/grip, tackle speed/range/cooldown/knockback |
 | `scripts/kick_controller.gd` | charge time, min/max power, sweet spot, loft, curve, kick range |
+| `scripts/bot_brain.gd` | think interval, shoot range, tackle range/chance, aim error |
 | `scripts/ball.gd` | mass, bounce (physics material), curve decay, rolling friction |
-| `scripts/chase_camera.gd` | distance, pitch, mouse sensitivity, follow lag |
+| `scripts/chase_camera.gd` | distance, pitch, shoulder offset, sensitivity, follow lag |
 | `scripts/arena_builder.gd` | arena size, wall height, goal width |
 
 Change values while the game is running is not supported yet — edit and restart,
@@ -71,24 +80,28 @@ scene.
 project.godot
 scenes/main.tscn          entry point (a single Node3D + main.gd)
 scripts/
-  main.gd                 builds the sandbox, owns scoring/reset
+  main.gd                 builds the 1v1 sandbox, owns scoring/reset
   arena_builder.gd        floor, markings, walls, bleachers
-  player.gd               movement, stamina, dribbling
-  kick_controller.gd      charge/release, curve, trajectory preview
+  player.gd               movement, stamina, dribbling, tackles, knockdowns
+  kick_controller.gd      charge/release, force_kick for the AI, preview
   ball.gd                 physics ball, curve force, rolling friction
-  ball_trail.gd           speed trail
-  chase_camera.gd         third-person camera
+  ball_trail.gd           speed ribbon
+  chase_camera.gd         third-person shoulder camera
   goal.gd                 frame, net shader, detection area
-  keeper_dummy.gd         sandbox-only training keeper
+  bot_brain.gd            AI decision making
+  bot_input.gd            AI input source
   juice.gd                autoload: screen shake + hit-stop
   input_hub.gd            keyboard/mouse or gamepad input source
   ribbon.gd               immediate-mode ribbon helper
-  ui/hud.gd, ui/hud_painter.gd
+  ui/hud.gd               counters, banners
+  ui/hud_painter.gd       charge meter, stamina, tackle bar
 tools/
-  capture.gd              renders a screenshot
-  test_play.gd            headless: kick, goal detection, reset
-  test_move.gd            headless: sprint, dribble, stamina, kick
-  scripted_input.gd       fake input for tests
+  capture.gd              screenshot
+  test_play.gd            headless kick/goal/reset test
+  test_move.gd            headless sprint/dribble/kick test
+  test_tackle.gd          headless tackle/knockdown test
+  test_bot.gd             headless AI test (bot plays alone)
+  scripted_input.gd       fake input source
 ```
 
 ## Dev commands
@@ -96,6 +109,8 @@ tools/
 ```bat
 godot --headless --path . --script tools/test_play.gd
 godot --headless --path . --script tools/test_move.gd
+godot --headless --path . --script tools/test_tackle.gd
+godot --headless --path . --script tools/test_bot.gd
 godot --path . --script tools/capture.gd --resolution 1600x900
 ```
 
@@ -111,7 +126,7 @@ godot --path . --script tools/capture.gd --resolution 1600x900
 - Multiball is a rare item: 3 balls for 20 s or until a goal
 - Listen-server netcode, room codes
 
-## Next milestone (M2)
+## Next milestone (M3)
 
-Local 1v1: second player, slide tackles, the four hit tiers, kickoff restarts and
-a match timer.
+Match flow: 2-minute timer, kickoff countdown and a proper restart sequence. Then
+local 2-player, then items.

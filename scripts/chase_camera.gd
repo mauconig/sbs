@@ -11,6 +11,7 @@ extends Camera3D
 @export var max_pitch := 44.0
 @export var min_distance := 6.0
 @export var max_distance := 16.0
+@export var shoulder_offset := 0.9
 
 var yaw := 0.0
 @export var pitch := 20.0
@@ -54,8 +55,9 @@ func _physics_process(delta: float) -> void:
 		_pivot = _pivot.lerp(desired, 1.0 - exp(-delta / maxf(follow_lag, 0.001)))
 
 	var rotation_basis := Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, deg_to_rad(-pitch))
-	global_position = _pivot + rotation_basis * Vector3(0.0, 0.0, distance)
-	look_at(_pivot, Vector3.UP)
+	var shoulder := rotation_basis.x * shoulder_offset
+	global_position = _pivot + rotation_basis * Vector3(0.0, 0.0, distance) + shoulder
+	look_at(_pivot + shoulder, Vector3.UP)
 
 	var shake: float = Juice.shake
 	h_offset = randf_range(-1.0, 1.0) * shake * 0.35

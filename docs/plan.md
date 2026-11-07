@@ -1,8 +1,8 @@
 # Mega Battle Football — Project Plan & Progress
 
 **Last updated:** 7 November 2026
-**Current milestone:** M1 — playable feel prototype ✅
-**Commit:** `7f09277` (M1: playable sandbox prototype)
+**Current milestone:** M2 — 1v1 vs AI + tackles (in progress)
+**Previous:** M1 — playable feel prototype ✅
 **Engine:** Godot 4.7.2 stable · GDScript · Jolt physics · Forward+
 
 ---
@@ -97,11 +97,12 @@ Variety comes from physics parameters, not new art.
 |---|---|---|---|
 | **M0** | Setup: Godot, git, project, input, palette | 0.5 h | ✅ done |
 | **M1** | **Sandbox feel prototype** — pitch, player, ball, dribble, kick, camera, goal, keeper, HUD, juice | 6–10 h | ✅ done |
-| **M2** | Local 1v1 — second player, tackles, hit tiers, kickoff restarts, match timer | 4–6 h | ⬜ next |
-| **M3** | Items — 4 boxes, all 8 items, hit reactions, friendly fire, loot drop | 6–8 h | ⬜ |
-| **M4** | Online 2v2 — listen server, room codes, prediction/interpolation | 10–15 h | ⬜ |
-| **M5** | Arenas + cup flow — 3 arenas, rotation, scoring, sudden death, lobby gate | 4–6 h | ⬜ |
-| **M6** | Presentation — animation, audio, UI polish, settings, cosmetics | ongoing | ⬜ |
+| **M2** | **1v1 vs AI** — AI opponent, slide tackles, knockdowns, defences | 4–6 h | 🟡 in progress |
+| **M3** | Match flow — 2 min timer, kickoff countdown, restart, local 2P | 3–5 h | ⬜ |
+| **M4** | Items — 4 boxes, all 8 items, hit reactions, friendly fire, loot drop | 6–8 h | ⬜ |
+| **M5** | Online 2v2 — listen server, room codes, prediction/interpolation | 10–15 h | ⬜ |
+| **M6** | Arenas + cup flow — 3 arenas, rotation, scoring, sudden death, lobby gate | 4–6 h | ⬜ |
+| **M7** | Presentation — animation, audio, UI polish, settings, cosmetics | ongoing | ⬜ |
 
 **≈ 30–45 h to online 2v2.** M1 was the risk; it is now playable.
 
@@ -206,35 +207,96 @@ Variety comes from physics parameters, not new art.
 
 ---
 
-## 5. Known gaps (expected at M1)
+## 4b. M2 — 1v1 vs AI + tackles (in progress)
+
+### Built
+
+- **AI opponent** (red kit): defends the far goal, attacks the near goal
+- AI behaviour loop: chase the loose ball, drive *through* the ball toward the
+  goal, shoot inside 14 m, plant its feet and shoot when the ball is settled,
+  slide tackle when the human has the ball
+- **Human slide tackle** (Space / B): 0.45 s slide, up to 13.5 m/s, 1.55 m hit
+  radius, 9 m/s knockback, 1.7 s knockdown, 1.1 s cooldown, 0.55 s recovery
+  after a slide
+- **Knockdown**: victim loses control, is pushed, gets up where it lands, then has
+  1 s of protection. Works on both the human and the AI.
+- Tackle **knocks the ball loose** (8 m/s push) as well as the player
+- Per-team scoring: you attack the far goal, the bot attacks the near one
+- HUD shows `YOU x — y BOT`, plus a tackle-cooldown bar
+- **Keeper removed** — no goalkeepers in this game, by design
+
+### AI tuning (`scripts/bot_brain.gd`)
+
+| Value | Setting | Why |
+|---|---|---|
+| Think interval | 0.16 s + 0.06 jitter | Beatable reaction time |
+| Speed | 94 % of the player | You can outrun it |
+| Shoot range | 14 m | Shoots from sensible spots |
+| Tackle chance | 45 % per decision | Misses often enough to punish |
+| Aim error | ±0.10 rad | Shots can miss the frame |
+
+### Bugs found and fixed in M2
+
+1. **Dribble hold distance was inside the collision radius.** The magnet held the
+   ball 0.55 m from the player, but player radius + ball radius = 0.58 m, so the
+   bodies were permanently in contact. The physics fought the magnet, balls
+   popped into the air and players got stuck. Now 0.78 m ahead + 0.22 m to the
+   side.
+2. **AI kick desync.** Driving the AI through the human charge/release input
+   produced whiffs and stuck charges. Added `force_kick()` so the AI calls the
+   kick directly.
+3. **Ball fell through the floor inside the goals** — the floor ended exactly at
+   the goal line. Now extends 2 m past each wall.
+4. **Ball hidden behind the player** in the chase cam. Added a 0.9 m shoulder
+   offset and a lateral dribble offset.
+
+### Still open in M2
+
+- Local 2-player (second controller/keyboard)
+- Kickoff countdown and a match timer
+- The AI can still lose the ball in wide areas and over-chase; needs playtest
+
+---
+
+## 5. Known gaps
 
 Not bugs — just not built yet:
 
-- No tackle, slide, knockdown, ragdoll or hit reactions
-- No items, boxes, multiball, friendly fire
-- No second player, no match flow, no timer, no kickoff
+- No items, boxes, multiball, friendly fire, hit reactions beyond the slide
+- No match flow: no timer, no kickoff countdown, no cup
+- No second local player (the 1v1 opponent is the AI)
 - No audio at all
-- No character animation (the model slides)
+- No character animation (the models slide)
 - No menu, lobby, pause, settings or rebinding
 - No console/controller hot-plug handling (device 0 is hardcoded)
-- Sandbox scoring counts goals in **both** nets and has no match state
+- No ragdoll physics — knockdowns are a scripted tilt + knockback
 
 ---
 
 ## 6. Playtest checklist (needs a human at the keyboard)
 
-Answer these before M2 starts:
+### Attack
 
 1. **Kick** — is 0.75 s to full charge right? Does a full-power shot feel violent?
 2. **Ball weight** — football or beach ball?
-3. **Dribbling** — too sticky, too loose, or right? Can you lose it?
-4. **Camera** — too far/close? Is the pitch angle comfortable?
+3. **Dribbling** — is the ball now readable and controllable while sprinting?
+4. **Camera** — is the shoulder offset better? Too far/close? Is the ball visible?
 5. **Sweet spot** — are you hitting it deliberately, or always overcharging?
-6. **Pace** — does sprinting across 32 m feel good, or is the arena too big?
-7. **Curve** — can you feel the bend, and is A/D the right input?
+6. **Curve** — can you feel the bend, and is A/D the right input?
 
-**Gate:** if you would not voluntarily play the sandbox for 5 minutes with
-nothing to achieve, tune these before building anything else.
+### Defence (this pass)
+
+7. **Can you stop the bot?** Tackle it, or is it too slippery?
+8. **Tackle feel** — is the slide too fast/slow, too long/short? Does the cooldown
+   punish spamming?
+9. **Knockdown** — is 1.7 s down + 1 s protection the right punishment, or does it
+   feel like nothing?
+10. **Can the bot score on you?** If it can't, defence is pointless. If it scores
+    at will, it's too hard.
+11. **Is defence fun?** Winning the ball should feel as good as shooting.
+
+**Gate:** if you would not voluntarily play 1v1 for 5 minutes, fix that before
+adding items.
 
 ---
 
@@ -246,22 +308,25 @@ scenes/main.tscn          single Node3D + main.gd (builds the sandbox)
 scripts/
   main.gd                 world assembly, scoring, reset, environment
   arena_builder.gd        floor, markings, walls, trim, bleachers
-  player.gd               movement, stamina, magnetic dribbling
-  kick_controller.gd      charge/release, curve, trajectory preview
+  player.gd               movement, stamina, dribbling, tackles, knockdowns
+  kick_controller.gd      charge/release, force_kick for AI, preview
   ball.gd                 RigidBody ball, curve force, rolling friction
   ball_trail.gd           speed ribbon
-  chase_camera.gd         third-person orbit/follow camera
+  chase_camera.gd         third-person shoulder camera
   goal.gd                 frame, net shader, detection area
-  keeper_dummy.gd         sandbox-only training keeper
+  bot_brain.gd            AI decisions
+  bot_input.gd            AI input source
   juice.gd                autoload: screen shake + hit-stop
   input_hub.gd            keyboard/mouse or gamepad input source
   ribbon.gd               immediate-mode ribbon helper
   ui/hud.gd               counters, banners
-  ui/hud_painter.gd       charge meter + stamina bar
+  ui/hud_painter.gd       charge meter, stamina bar, tackle bar
 tools/
   capture.gd              screenshot
   test_play.gd            headless kick/goal/reset test
   test_move.gd            headless sprint/dribble/kick test
+  test_tackle.gd          headless tackle/knockdown test
+  test_bot.gd             headless AI test (bot plays alone)
   scripted_input.gd       fake input source
 ```
 
@@ -309,3 +374,7 @@ ball and goal to scenes when artists or designers need to edit them.
 | 7 Nov 2026 | Online-only matches, 2v2 minimum, no bots |
 | 7 Nov 2026 | Chase cam over broadcast cam |
 | 7 Nov 2026 | Generous stamina bar |
+| 7 Nov 2026 | **No goalkeeper** — removed from the build entirely |
+| 7 Nov 2026 | 1v1 vs AI added as the defensive testbed before online play |
+| 7 Nov 2026 | Tackle = slide with knockdown, not a standing steal |
+| 7 Nov 2026 | AI uses a direct `force_kick()` instead of faking charge input |

@@ -11,9 +11,10 @@ var stamina := 100.0
 var stamina_max := 100.0
 var sprinting := false
 var exhausted := false
-var goals := 0
+var tackle_ready := 1.0
+var player_score := 0
+var bot_score := 0
 var shots := 0
-var best_goal_distance := 0.0
 
 var _painter: Control
 var _stats: Label
@@ -41,7 +42,7 @@ func _ready() -> void:
 	add_child(_banner)
 
 	_hint = _make_label(15, Color(0.62, 0.72, 0.86))
-	_hint.text = "WASD run  ·  SHIFT sprint  ·  hold LMB to charge, A/D curves  ·  R reset  ·  ESC mouse"
+	_hint.text = "WASD run  ·  SHIFT sprint  ·  hold LMB to charge, A/D curves  ·  SPACE slide tackle  ·  R reset  ·  ESC mouse"
 	_hint.position = Vector2(34, 0)
 	add_child(_hint)
 
@@ -69,7 +70,7 @@ func show_banner(text: String, color: Color = Color(1.0, 0.85, 0.3)) -> void:
 
 func _process(_delta: float) -> void:
 	var view := get_viewport().get_visible_rect().size
-	_stats.text = "%d GOALS    %d SHOTS" % [goals, shots]
+	_stats.text = "YOU  %d  —  %d  BOT" % [player_score, bot_score]
 
 	_banner.size = _banner.get_minimum_size()
 	_banner.position = Vector2(view.x * 0.5 - _banner.size.x * 0.5, view.y * 0.2)

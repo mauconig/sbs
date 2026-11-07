@@ -1,6 +1,5 @@
 extends SceneTree
-## Dev tool: boots the sandbox, walks the player at the ball, starts charging
-## a kick, then saves a screenshot and quits.
+## Dev tool: stages a 1v1 screenshot (player charging, bot defending) and quits.
 ## Usage: godot --path . --script tools/capture.gd
 
 const ScriptedInput := preload("res://tools/scripted_input.gd")
@@ -19,32 +18,24 @@ func _physics_process(_delta: float) -> bool:
 	frames += 1
 
 	if frames == 5:
+		main.bot_brain.set_physics_process(false)
+		main.bot.input = null
+		main.bot.reset_at(Vector3(1.4, 1, 0.6), Vector3(0, 0, 1))
+		main.player.reset_at(Vector3(-0.6, 1, 4.2), Vector3(0, 0, -1))
+		main.ball.reset_to(Vector3(-0.2, 0.22, 2.9))
+		main.hud._banner.modulate.a = 0.0
 		input = ScriptedInput.new()
 		main.player.input = input
 		main.kick.input = input
-		main.camera.input = input
-		input.move = Vector2(0, 1)
-
-	if frames == 44:
-		input.move = Vector2.ZERO
-		main.ball.reset_to(
-			main.player.global_position
-			+ main.player.facing * 1.0
-			+ main.player.global_basis.x * 0.55
-			+ Vector3.UP * 0.22
-		)
-
-	if frames == 50:
-		main.camera.yaw = 0.22
 		input.kick = true
 
-	if frames == 86:
+	if frames == 45:
 		main.kick.charge = 0.87
 
-	if frames == 90:
+	if frames == 46:
 		var image := root.get_texture().get_image()
 		image.save_png("res://docs/screenshot.png")
-		print("[capture] charge=", snappedf(main.kick.charge, 0.01), " ball=", main.ball.global_position)
+		print("[capture] charge=", snappedf(main.kick.charge, 0.01))
 		return true
 
 	return false

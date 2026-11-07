@@ -61,7 +61,12 @@ func _make_materials() -> void:
 
 
 func _build_floor() -> void:
-	_add_static_box(Vector3(HALF_WIDTH * 2.0, 0.4, HALF_LENGTH * 2.0), Vector3(0, -0.2, 0), _floor, 0.1)
+	_add_static_box(
+		Vector3(HALF_WIDTH * 2.0, 0.4, HALF_LENGTH * 2.0 + 4.0),
+		Vector3(0, -0.2, 0),
+		_floor,
+		0.1
+	)
 	for i in 8:
 		var stripe := MeshInstance3D.new()
 		var mesh := BoxMesh.new()

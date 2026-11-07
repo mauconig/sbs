@@ -49,3 +49,13 @@ func _draw() -> void:
 		stamina_color = Color(1.0, 0.85, 0.35)
 	var ratio := clampf(hud.stamina / maxf(hud.stamina_max, 1.0), 0.0, 1.0)
 	draw_rect(Rect2(stamina_x, stamina_y, stamina_width * ratio, 8.0), stamina_color)
+
+	# Slide-tackle readiness.
+	var tackle_width := 110.0
+	var tackle_x := view.x * 0.5 - tackle_width * 0.5
+	var tackle_y := stamina_y + 14.0
+	draw_rect(Rect2(tackle_x, tackle_y, tackle_width, 5.0), Color(0, 0, 0, 0.45))
+	var tackle_color := Color(1.0, 0.55, 0.2, 0.9)
+	if hud.tackle_ready < 1.0:
+		tackle_color = Color(1.0, 0.55, 0.2, 0.35)
+	draw_rect(Rect2(tackle_x, tackle_y, tackle_width * clampf(hud.tackle_ready, 0.0, 1.0), 5.0), tackle_color)
