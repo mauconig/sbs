@@ -6,6 +6,8 @@ prototype** — one player, one ball, two goals and a training keeper.
 
 ![prototype screenshot](docs/screenshot.png)
 
+📋 **Roadmap, locked rules and current tuning values:** [`docs/plan.md`](docs/plan.md)
+
 ## Run it
 
 Godot **4.7.2** (installed via `winget install GodotEngine.GodotEngine`).
