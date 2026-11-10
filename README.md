@@ -3,10 +3,10 @@
 A 2v2–4v4 arcade football game where nobody dies, everyone plays at once, and the
 ball can be hit into the net with a rocket.
 
-**Current build: M2 — 1v1 against an AI opponent, with slide tackles and
-knockdowns.** No goalkeeper, no items yet.
-
-![prototype screenshot](docs/screenshot.png)
+**Default scene: the Lavender Dome visual prototype.** Four original chibi
+characters, animated poses, a purple indoor arena, a paneled football and an
+illustrated arcade HUD. This is a visual playground with local demonstration
+controls. The M2 playable 1v1 sandbox is preserved at `scenes/main.tscn` (F8).
 
 📋 **Roadmap, locked rules and current tuning values:** [`docs/plan.md`](docs/plan.md)
 
@@ -20,7 +20,22 @@ run.bat
 
 Or open the project folder in the Godot editor and press F5.
 
-## Controls
+## Visual prototype controls
+
+| Action | Key |
+|---|---|
+| Move selected character / faster move | WASD / Shift |
+| Idle / run / jump / kick / celebrate | 1 / 2 / 3 / 4 / 5 |
+| Jump / cosmetic kick / sweep pose | Space / left click / Ctrl |
+| Select next character | Tab |
+| Character close-up / arcade camera | C |
+| Cycle facial expressions | E |
+| Pause / resume animation | P |
+| Reset presentation | F2 |
+| Save a presentation screenshot | F12 |
+| Open the preserved 1v1 sandbox | F8 |
+
+## M2 sandbox controls
 
 | Action | Keyboard / mouse | Gamepad |
 |---|---|---|
@@ -28,10 +43,11 @@ Or open the project folder in the Godot editor and press F5.
 | Sprint | Shift | RB / RT |
 | Charge kick | Hold left mouse | Hold X |
 | Curve the kick | A / D while charging | Left stick X while charging |
-| **Slide tackle** | **Space** | **B** |
+| **Jump** | **Space** | **A** |
+| **Sweep / slide tackle** | **Ctrl** | **B** |
 | Aim | Move the mouse | Right stick |
 | Zoom camera | Mouse wheel | — |
-| Reset match | R | — |
+| Reset match | F2 | — |
 | Release mouse | Esc | — |
 
 **Kick rules:** 0.75 s to full charge. 7 m/s at a tap, 24 m/s at full power.
@@ -39,15 +55,16 @@ Charging inside the **80–95 % sweet spot** gives 1.15× power, a gold trajecto
 and a hit-stop. Overcharging past 95 % gives max power but no bonus — the meter
 turns red.
 
-## What is already in this build
+## What is already in the M2 sandbox
 
 - 32 × 20 m walled arena with markings, bleachers and night-stadium lighting
 - **1v1 against an AI opponent** — it chases, dribbles at your goal, shoots and
   slide-tackles you. It is deliberately beatable.
 - `CharacterBody3D` players: camera-relative movement, sprint with generous
   stamina (100 max, 14/s drain, 25/s regen), smooth turning
-- **Slide tackle** with a 0.45 s slide, 1.1 s cooldown, knockdown on contact and
-  a knockback that sends the victim sliding
+- **Slide tackle**: 0.16 s burst, 0.32 s braking, then 0.55 s planted recovery.
+  The burst gains ground over sprinting; movement stays locked during recovery.
+  Contact knocks the opponent down. Cooldown is 1.3 s.
 - **Knockdowns**: 1.7 s down, can't act, then 1 s of protection on recovery
 - **Magnetic dribbling**: the ball is held slightly ahead and to your right,
   trapped when you stand still; it breaks free when hit or kicked
@@ -59,11 +76,13 @@ turns red.
 
 ## Tuning knobs
 
-Everything that matters is an `@export` on these scripts:
+Tune the exported values and the shared sweep curve in these scripts:
 
 | File | Knobs |
 |---|---|
-| `scripts/player.gd` | speed, acceleration, stamina, dribble radius/grip, tackle speed/range/cooldown/knockback |
+| `scripts/player.gd` | speed, acceleration, stamina, dribble radius/grip, tackle range/cooldown/knockback |
+| `scripts/sweep_motion.gd` | sweep burst multiplier, burst/braking time, planted recovery and cooldown |
+| `scripts/visuals/character_visual.gd` | shared model scale and skeletal action playback |
 | `scripts/kick_controller.gd` | charge time, min/max power, sweet spot, loft, curve, kick range |
 | `scripts/bot_brain.gd` | think interval, shoot range, tackle range/chance, aim error |
 | `scripts/ball.gd` | mass, bounce (physics material), curve decay, rolling friction |

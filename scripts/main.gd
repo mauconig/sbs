@@ -12,6 +12,9 @@ const BotBrainScript := preload("res://scripts/bot_brain.gd")
 const BotInput := preload("res://scripts/bot_input.gd")
 const HudScript := preload("res://scripts/ui/hud.gd")
 const InputHub := preload("res://scripts/input_hub.gd")
+const OutfitStore := preload("res://scripts/visuals/outfit_store.gd")
+
+@export var outfit_path := OutfitStore.SAVE_PATH
 
 const SPAWN := Vector3(0.0, 1.0, 7.0)
 const BOT_SPAWN := Vector3(0.0, 1.0, -7.0)
@@ -62,15 +65,16 @@ func _build_environment() -> void:
 	sky.sky_material = sky_material
 	environment.sky = sky
 
-	environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	environment.ambient_light_energy = 0.8
+	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	environment.ambient_light_color = Color(0.88, 0.84, 0.95)
+	environment.ambient_light_energy = 0.65
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	environment.glow_enabled = true
 	environment.glow_intensity = 0.35
 	environment.glow_bloom = 0.04
 	environment.fog_enabled = true
-	environment.fog_light_color = Color(0.06, 0.09, 0.16)
-	environment.fog_density = 0.008
+	environment.fog_light_color = Color(0.5, 0.39, 0.68)
+	environment.fog_density = 0.003
 	environment.ssao_enabled = true
 	environment.ssao_intensity = 1.4
 
@@ -79,7 +83,7 @@ func _build_environment() -> void:
 
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-54.0, -42.0, 0.0)
-	sun.light_energy = 1.5
+	sun.light_energy = 1.05
 	sun.light_color = Color(1.0, 0.96, 0.9)
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 90.0
@@ -103,6 +107,7 @@ func _build_ball() -> void:
 func _build_players() -> void:
 	player = PlayerScript.new()
 	player.name = "Player"
+	player.character_look = OutfitStore.load_look(outfit_path)
 	player.body_color = Color(0.18, 0.62, 1.0)
 	player.position = SPAWN
 	add_child(player)
@@ -112,6 +117,7 @@ func _build_players() -> void:
 	bot = PlayerScript.new()
 	bot.name = "Bot"
 	bot.body_color = Color(0.92, 0.22, 0.25)
+	bot.character_look = load("res://assets/characters/pip.tres")
 	bot.position = BOT_SPAWN
 	bot.camera_relative = false
 	bot.speed_multiplier = 0.94
@@ -231,6 +237,7 @@ func _on_bot_goal() -> void:
 
 func _on_player_kicked(_power: float, sweet: bool) -> void:
 	hud.shots += 1
+	player.play_kick_animation()
 	if sweet:
 		Juice.add_shake(0.2)
 
@@ -250,7 +257,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 			else:
 				Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-		elif event.keycode == KEY_R:
+		elif event.keycode == KEY_F2:
 			player_score = 0
 			bot_score = 0
 			hud.shots = 0

@@ -55,7 +55,11 @@ func _decide() -> void:
 	var my_ball := _flat_distance(body.global_position, ball_pos)
 	var opp_ball := _flat_distance(opponent.global_position, ball_pos)
 
-	if my_ball < 1.5 and _ball_in_front(ball_pos):
+	if ball.carrier == body:
+		_attack(ball_pos)
+	elif ball.carrier == opponent:
+		_defend(opponent.global_position)
+	elif my_ball < 1.5 and _ball_in_front(ball_pos):
 		_attack(ball_pos)
 	elif opp_ball < 1.7:
 		_defend(opponent.global_position)

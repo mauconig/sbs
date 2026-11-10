@@ -20,9 +20,9 @@ func _ready() -> void:
 
 func _build_frame() -> void:
 	var white := StandardMaterial3D.new()
-	white.albedo_color = Color(0.95, 0.97, 1.0)
+	white.albedo_color = Color(1.0, 0.24, 0.08)
 	white.roughness = 0.35
-	white.metallic = 0.4
+	white.metallic = 0.05
 
 	for side in [-1.0, 1.0]:
 		var post := MeshInstance3D.new()

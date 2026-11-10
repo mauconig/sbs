@@ -42,7 +42,7 @@ func _ready() -> void:
 	add_child(_banner)
 
 	_hint = _make_label(15, Color(0.62, 0.72, 0.86))
-	_hint.text = "WASD run  ·  SHIFT sprint  ·  hold LMB to charge, A/D curves  ·  SPACE slide tackle  ·  R reset  ·  ESC mouse"
+	_hint.text = "WASD run | SHIFT sprint | SPACE jump | CTRL sweep | mouse look | wheel zoom | hold LMB to charge, A/D curve | F2 reset | ESC free/lock mouse"
 	_hint.position = Vector2(34, 0)
 	add_child(_hint)
 

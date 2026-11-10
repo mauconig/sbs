@@ -12,6 +12,8 @@ extends Camera3D
 @export var min_distance := 6.0
 @export var max_distance := 16.0
 @export var shoulder_offset := 0.9
+@export_flags_3d_physics var collision_mask := 1 | (1 << 4)
+@export var collision_margin := 0.35
 
 var yaw := 0.0
 @export var pitch := 20.0
@@ -56,9 +58,25 @@ func _physics_process(delta: float) -> void:
 
 	var rotation_basis := Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, deg_to_rad(-pitch))
 	var shoulder := rotation_basis.x * shoulder_offset
-	global_position = _pivot + rotation_basis * Vector3(0.0, 0.0, distance) + shoulder
+	var desired_position := _pivot + rotation_basis * Vector3(0.0, 0.0, distance) + shoulder
+	global_position = _position_before_obstacle(_pivot, desired_position)
 	look_at(_pivot + shoulder, Vector3.UP)
 
 	var shake: float = Juice.shake
 	h_offset = randf_range(-1.0, 1.0) * shake * 0.35
 	v_offset = randf_range(-1.0, 1.0) * shake * 0.35
+
+
+func _position_before_obstacle(origin: Vector3, desired: Vector3) -> Vector3:
+	if not is_inside_tree() or collision_mask == 0:
+		return desired
+	var query := PhysicsRayQueryParameters3D.create(origin, desired, collision_mask)
+	query.collide_with_areas = false
+	if target is CollisionObject3D:
+		query.exclude = [target.get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		return desired
+	var ray := desired - origin
+	var safe_length := maxf(float(origin.distance_to(hit.position)) - collision_margin, 0.12)
+	return origin + ray.normalized() * safe_length

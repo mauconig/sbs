@@ -17,7 +17,7 @@ signal kicked(power: float, sweet: bool)
 @export var curve_max := 7.0
 @export var debug := false
 
-var player: CharacterBody3D
+var player: Node3D
 var camera: Node3D
 var ball: RigidBody3D
 var input: RefCounted
@@ -90,12 +90,23 @@ func aim_dir() -> Vector3:
 	return Vector3(-sin(yaw), 0.0, -cos(yaw)).normalized()
 
 
+func cancel_charge() -> void:
+	charging = false
+	charge = 0.0
+	curve = 0.0
+	_was_held = input.kick_held() if input != null else false
+	if _preview != null:
+		_preview.hide()
+	if _landing != null:
+		_landing.hide()
+
+
 func _physics_process(delta: float) -> void:
 	cooldown_timer = maxf(0.0, cooldown_timer - delta)
 	if input == null:
 		return
 
-	if player != null and (player.knocked_out > 0.0 or player.tackle_timer > 0.0):
+	if player != null and (float(_player_value("knocked_out", 0.0)) > 0.0 or float(_player_value("tackle_timer", 0.0)) > 0.0):
 		charging = false
 		charge = 0.0
 		_preview.visible = false
@@ -155,6 +166,8 @@ func force_kick(power_ratio: float, direction: Vector3, curve_amount: float = 0.
 	## Applies a kick immediately. Used by the AI, which does not charge.
 	if ball == null or player == null:
 		return false
+	if ball.carrier != null and ball.carrier != player:
+		return false
 
 	var to_ball := ball.global_position - player.global_position
 	var flat := Vector3(to_ball.x, 0.0, to_ball.z)
@@ -175,13 +188,16 @@ func force_kick(power_ratio: float, direction: Vector3, curve_amount: float = 0.
 	var loft := deg_to_rad(loft_deg + loft_gain_deg * t)
 	var shot := (aim * cos(loft) + Vector3.UP * sin(loft)).normalized()
 
+	ball.release_from(player)
+	ball.freeze = false
 	ball.sleeping = false
 	ball.linear_velocity = shot * power
 	ball.angular_velocity = Vector3(curve_amount * 6.0, -curve_amount * 10.0, 0.0)
 	ball.curve_strength = curve_amount * curve_max * (0.35 + t)
 
 	cooldown_timer = cooldown
-	player.dribble_lock = 0.3
+	if _has_player_property("dribble_lock"):
+		player.set("dribble_lock", 0.3)
 	kicked.emit(power, sweet_hit)
 
 	if sweet_hit:
@@ -200,6 +216,21 @@ func force_kick(power_ratio: float, direction: Vector3, curve_amount: float = 0.
 	return true
 
 
+func _has_player_property(property_name: StringName) -> bool:
+	if player == null:
+		return false
+	for property_info: Dictionary in player.get_property_list():
+		if StringName(property_info.get("name", "")) == property_name:
+			return true
+	return false
+
+
+func _player_value(property_name: StringName, fallback: Variant) -> Variant:
+	if _has_player_property(property_name):
+		return player.get(property_name)
+	return fallback
+
+
 func preview_points() -> Array:
 	var start := Vector3.ZERO
 	var aim := aim_dir()
@@ -216,7 +247,7 @@ func preview_points() -> Array:
 	var direction := (aim * cos(loft) + Vector3.UP * sin(loft)).normalized()
 
 	var points: Array = [start]
-	var position := start
+	var shot_position := start
 	var velocity := direction * power
 	var step := 0.045
 	var lateral := curve * curve_max * (0.35 + t)
@@ -225,9 +256,9 @@ func preview_points() -> Array:
 		var side := Vector3(-velocity.z, 0.0, velocity.x)
 		if side.length() > 0.001:
 			velocity += side.normalized() * lateral * step
-		position += velocity * step
-		points.append(position)
-		if i > 2 and position.y < 0.08:
+		shot_position += velocity * step
+		points.append(shot_position)
+		if i > 2 and shot_position.y < 0.08:
 			break
 	return points
 

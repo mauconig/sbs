@@ -62,8 +62,14 @@ func kick_held() -> bool:
 
 func tackle_held() -> bool:
 	if device < 0:
-		return Input.is_key_pressed(KEY_SPACE)
+		return Input.is_key_pressed(KEY_CTRL)
 	return Input.is_joy_button_pressed(device, JOY_BUTTON_B)
+
+
+func jump_held() -> bool:
+	if device < 0:
+		return Input.is_key_pressed(KEY_SPACE)
+	return Input.is_joy_button_pressed(device, JOY_BUTTON_A)
 
 
 func item_held() -> bool:

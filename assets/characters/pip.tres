@@ -1,0 +1,17 @@
+[gd_resource type="Resource" load_steps=3 format=3]
+[ext_resource type="Script" path="res://scripts/visuals/character_look.gd" id="1"]
+[ext_resource type="PackedScene" path="res://assets/characters/models/meshy_blank_buddy.glb" id="2"]
+[resource]
+script = ExtResource("1")
+display_name = "PIP"
+model_scene = ExtResource("2")
+hairstyle = 3
+skin_color = Color(1, 0.66, 0.57, 1)
+hair = Color(0.25, 0.105, 0.105, 1)
+shirt_color = Color(1, 1, 1, 1)
+accent = Color(1, 0.86, 0.96, 1)
+shorts_color = Color(1, 1, 1, 1)
+socks_color = Color(1, 1, 1, 1)
+boots_color = Color(1, 1, 1, 1)
+number = "10"
+accessory = true

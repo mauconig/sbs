@@ -5,6 +5,7 @@ var move := Vector2.ZERO
 var sprinting := false
 var kick := false
 var tackle := false
+var jump := false
 
 
 func move_vector() -> Vector2:
@@ -25,6 +26,10 @@ func kick_held() -> bool:
 
 func tackle_held() -> bool:
 	return tackle
+
+
+func jump_held() -> bool:
+	return jump
 
 
 func item_held() -> bool:

@@ -1,5 +1,6 @@
 # Godot
 .godot/
+.export/
 export_presets.cfg
 *.translation
 
@@ -9,3 +10,13 @@ desktop.ini
 .vscode/
 .idea/
 *.tmp
+*.bak
+*.blend1
+*.blend2
+*.blend@
+__pycache__/
+*.py[cod]
+
+# Local-only Graft index/config
+/.ignore
+/graft/

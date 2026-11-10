@@ -27,5 +27,9 @@ func tackle_held() -> bool:
 	return tackle
 
 
+func jump_held() -> bool:
+	return false
+
+
 func item_held() -> bool:
 	return false
