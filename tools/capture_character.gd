@@ -11,6 +11,8 @@ var sample := 0.0
 var four_views := false
 var parts_palette := false
 var lower_body := false
+var show_bazooka := false
+var weapon_fire := false
 
 
 func _initialize() -> void:
@@ -31,6 +33,10 @@ func _build_stage() -> void:
 			parts_palette = true
 		if argument=="--lower-body":
 			lower_body = true
+		if argument=="--bazooka":
+			show_bazooka = true
+		if argument=="--weapon-fire":
+			weapon_fire = true
 	if four_views:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 		DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS,true)
@@ -44,13 +50,13 @@ func _build_stage() -> void:
 	environment.background_color = Color("8851cf")
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color.WHITE
-	environment.ambient_light_energy = 0.45
+	environment.ambient_light_energy = 0.6
 	environment.ambient_light_sky_contribution = 0.0
 	world.environment = environment
 	stage.add_child(world)
 	var key := DirectionalLight3D.new()
 	key.rotation_degrees = Vector3(-38,145,0)
-	key.light_energy = 0.35
+	key.light_energy = 1.1
 	key.light_color = Color("fff5ee")
 	key.shadow_enabled = true
 	key.shadow_opacity = 0.27
@@ -59,7 +65,7 @@ func _build_stage() -> void:
 	stage.add_child(key)
 	var fill := DirectionalLight3D.new()
 	fill.rotation_degrees = Vector3(-22,-35,0)
-	fill.light_energy = 0.12
+	fill.light_energy = 0.3
 	fill.light_color = Color("dce4ff")
 	stage.add_child(fill)
 	var floor_mesh := MeshInstance3D.new()
@@ -87,6 +93,8 @@ func _build_stage() -> void:
 		actor.set("time",sample)
 		actor.set("action_time",sample)
 		actor.call("_pose",0.0)
+		actor.bazooka.equipped = show_bazooka
+		actor.bazooka.aiming = show_bazooka
 		var player := actor.get("_animation_player") as AnimationPlayer
 		if player != null:
 			actor.set("frozen",true)
@@ -122,6 +130,9 @@ func _build_stage() -> void:
 
 func _process(_delta: float) -> bool:
 	frames += 1
+	if weapon_fire and frames == 45:
+		for actor in actors:
+			actor.bazooka.fire()
 	return false
 
 

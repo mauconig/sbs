@@ -17,13 +17,14 @@ func _physics_process(_delta: float) -> bool:
 	frames += 1
 
 	if frames == 5:
-		main.bot_brain.set_physics_process(false)
+		for brain in main.ai_brains:
+			brain.set_physics_process(false)
 		main.bot.input = null
-		main.bot.global_position = Vector3(0, 1, 0)
+		main.bot.global_position = Vector3(0, 0.02, 0)
 		main.bot.facing = Vector3(0, 0, 1)
 		main.bot.protection = 0.0
-		main.player.reset_at(Vector3(0, 1, 2.2), Vector3(0, 0, -1))
-		main.ball.reset_to(Vector3(0, 0.4, 1.1))
+		main.player.reset_at(Vector3(0, 0.02, 2.2), Vector3(0, 0, -1))
+		main.ball.reset_to(Vector3(0, 0.4, 5.0))
 		input = ScriptedInput.new()
 		main.player.input = input
 		main.kick.input = input
@@ -42,6 +43,7 @@ func _physics_process(_delta: float) -> bool:
 			" bot vel=", main.bot.velocity.snapped(Vector3(0.01, 0.01, 0.01)),
 			" ball=", main.ball.global_position.snapped(Vector3(0.01, 0.01, 0.01)),
 			" ball vel=", snappedf(main.ball.linear_velocity.length(), 0.01))
+		assert(main.bot.knocked_out>0.0,"A grounded sweep must knock down an enemy in its path")
 
 	if frames == 120:
 		print("[test] recovery: bot knocked=", snappedf(main.bot.knocked_out, 0.01),

@@ -305,10 +305,24 @@ func _build_preview(parent: Control) -> void:
 	environment.background_mode = Environment.BG_COLOR
 	environment.background_color = Color("30273e")
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color.WHITE
-	environment.ambient_light_energy = 0.8
+	# Characters are lit by the scene now; give the preview its own soft key + fill.
+	environment.ambient_light_color = Color("d6e2f2")
+	environment.ambient_light_energy = 0.62
+	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	environment.tonemap_exposure = 1.08
+	environment.tonemap_white = 6.0
 	world.environment = environment
 	stage.add_child(world)
+	var key := DirectionalLight3D.new()
+	key.rotation_degrees = Vector3(-38,160,0)
+	key.light_color = Color("ffe9cc")
+	key.light_energy = 1.2
+	stage.add_child(key)
+	var fill := DirectionalLight3D.new()
+	fill.rotation_degrees = Vector3(-20,-30,0)
+	fill.light_color = Color("a9cdf5")
+	fill.light_energy = 0.3
+	stage.add_child(fill)
 	var pedestal := MeshInstance3D.new()
 	var cylinder := CylinderMesh.new()
 	cylinder.top_radius = 0.64
@@ -328,10 +342,10 @@ func _build_preview(parent: Control) -> void:
 	preview_actor.rotation.y = -0.25
 	stage.add_child(preview_actor)
 	var camera := Camera3D.new()
-	camera.position = Vector3(0,1.24,3.4)
-	camera.fov = 36
+	camera.position = Vector3(0,1.38,3.65)
+	camera.fov = 38
 	stage.add_child(camera)
-	camera.look_at(Vector3(0,0.9,0))
+	camera.look_at(Vector3(0,1.05,0))
 	camera.current = true
 	container.gui_input.connect(func(event: InputEvent):
 		if event is InputEventMouseMotion and event.button_mask & MOUSE_BUTTON_MASK_LEFT:

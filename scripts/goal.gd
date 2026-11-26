@@ -4,9 +4,10 @@ extends Node3D
 
 signal scored
 
-const WIDTH := 5.0
-const HEIGHT := 2.2
-const DEPTH := 1.4
+const Field := preload("res://scripts/field_config.gd")
+const WIDTH := Field.GOAL_WIDTH
+const HEIGHT := Field.GOAL_HEIGHT
+const DEPTH := Field.GOAL_DEPTH
 
 var _cooldown := 0.0
 
@@ -34,6 +35,7 @@ func _build_frame() -> void:
 		post.material_override = white
 		post.position = Vector3(side * WIDTH * 0.5, HEIGHT * 0.5, 0)
 		add_child(post)
+		_add_frame_collider(Vector3(side * WIDTH * 0.5, HEIGHT * 0.5, 0), Vector3(0.22, HEIGHT, 0.22))
 
 	var bar := MeshInstance3D.new()
 	var bar_mesh := BoxMesh.new()
@@ -42,6 +44,20 @@ func _build_frame() -> void:
 	bar.material_override = white
 	bar.position = Vector3(0, HEIGHT, 0)
 	add_child(bar)
+	_add_frame_collider(Vector3(0, HEIGHT, 0), Vector3(WIDTH + 0.2, 0.22, 0.22))
+
+
+func _add_frame_collider(at: Vector3, dimensions: Vector3) -> void:
+	var body := StaticBody3D.new()
+	body.position = at
+	body.collision_layer = 1
+	body.collision_mask = 4
+	var collider := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = dimensions
+	collider.shape = shape
+	body.add_child(collider)
+	add_child(body)
 
 
 func _build_net() -> void:
@@ -126,3 +142,16 @@ func _on_body_entered(body: Node) -> void:
 
 func _physics_process(delta: float) -> void:
 	_cooldown = maxf(0.0, _cooldown - delta)
+
+
+func preview_crossing(from: Vector3, to: Vector3) -> Dictionary:
+	## Returns the first clean front-plane crossing inside this goal aperture.
+	var local_from := global_transform.affine_inverse() * from
+	var local_to := global_transform.affine_inverse() * to
+	if local_from.z <= 0.0 or local_to.z > 0.0 or is_equal_approx(local_from.z, local_to.z):
+		return {}
+	var ratio := local_from.z / (local_from.z - local_to.z)
+	var hit := local_from.lerp(local_to, ratio)
+	if absf(hit.x) > WIDTH * 0.5 - 0.33 or hit.y < 0.22 or hit.y > HEIGHT - 0.33:
+		return {}
+	return {"position": global_transform * hit, "ratio": ratio}

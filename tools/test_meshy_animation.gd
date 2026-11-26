@@ -38,7 +38,19 @@ func _process(_delta: float) -> bool:
 			_expect(not actors[index].get("_idle_animation").is_empty(),"Each instance must have an idle clip")
 			_expect(players[index].is_playing(),"Idle must start at rest")
 			_expect(players[index].current_animation==actors[index].get("_idle_animation"),"Rest must select idle")
-			_expect(is_equal_approx(players[index].speed_scale,2.0),"Imported clips must play at twice their original speed")
+			_expect(is_equal_approx(players[index].speed_scale,2.0),"Idle keeps its authored playback rate")
+			var costume := actors[index].get("costume_assembly") as Node3D
+			_expect(costume != null,"The supplied costume must be attached")
+			if costume != null:
+				_expect(costume.get("hair_attachment") != null,"The supplied hair must follow the head bone")
+				_expect((costume.get("cleat_attachments") as Array).size()==2,"Both supplied cleats must follow the foot bones")
+				_expect(actors[index].find_children("*HairAttachment*","BoneAttachment3D",true,false).size()==1,"Only one hairstyle may be attached")
+				var attached_feet := 0
+				for attachment in actors[index].find_children("*","BoneAttachment3D",true,false):
+					if attachment.bone_name in ["mixamorig_LeftFoot","mixamorig_RightFoot"]:
+						attached_feet+=1
+				_expect(attached_feet==2,"Replacement cleats must not be duplicated by another attachment path")
+			_expect(not (actors[index].find_child("Boots",true,false) as MeshInstance3D).visible,"The supplied cleats must replace the old boots")
 			var skeleton := skeletons[index]
 			idle_chest_samples.append(skeleton.get_bone_pose_rotation(skeleton.find_bone("mixamorig_Spine1")))
 	if frames==30:
@@ -70,8 +82,9 @@ func _process(_delta: float) -> bool:
 		for index in actors.size():
 			_expect(players[index].is_playing(),"Running must continue through multiple loops")
 			_expect(players[index].current_animation==actors[index].get("_run_animation"),"Movement must select the supplied Running clip")
+			_expect(is_equal_approx(players[index].speed_scale,1.0),"Locomotion cadence must slow with the new football pace")
 		if failure.is_empty():
-			print("MESHY ANIMATION PASS: relaxed arms, planted feet, skeletal breathing, running bone motion and 2x playback in four process-disabled instances")
+			print("MESHY ANIMATION PASS: relaxed arms, planted feet, skeletal breathing and slower running cadence in four process-disabled instances")
 		else:
 			push_error("MESHY ANIMATION FAIL: "+failure)
 			quit(1)

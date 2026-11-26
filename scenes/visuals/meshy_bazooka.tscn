@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/characters/models/meshy_bazooka.res" id="1_wbpr5"]
+
+[node name="MeshyBazooka" type="Node3D" unique_id=1842883182]
+metadata/source_asset = "res://assets/characters/models/bazooka_holder.fbx"
+
+[node name="SuppliedLauncher" type="MeshInstance3D" parent="." unique_id=1224214137]
+mesh = ExtResource("1_wbpr5")
+
+[node name="TriggerGrip" type="Marker3D" parent="." unique_id=905881276]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0028102833, -0.2614712, 0.09963624)
+
+[node name="SupportGrip" type="Marker3D" parent="." unique_id=9448918]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12, -0.1, -0.08)
+
+[node name="Muzzle" type="Marker3D" parent="." unique_id=1851244293]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.57)

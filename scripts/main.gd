@@ -1,6 +1,5 @@
 extends Node3D
-## M2 sandbox: 1v1 against a beatable AI opponent. No keeper, no items yet.
-## Player attacks the far goal (-Z), the bot attacks the near goal (+Z).
+## Local 2v2: player + supporting AI versus two AI opponents.
 
 const ArenaBuilder := preload("res://scripts/arena_builder.gd")
 const PlayerScript := preload("res://scripts/player.gd")
@@ -13,22 +12,36 @@ const BotInput := preload("res://scripts/bot_input.gd")
 const HudScript := preload("res://scripts/ui/hud.gd")
 const InputHub := preload("res://scripts/input_hub.gd")
 const OutfitStore := preload("res://scripts/visuals/outfit_store.gd")
+const Field := preload("res://scripts/field_config.gd")
+const DayStadium := preload("res://scripts/visuals/day_stadium.gd")
+const ItemSystem := preload("res://scripts/items/item_system.gd")
 
 @export var outfit_path := OutfitStore.SAVE_PATH
 
-const SPAWN := Vector3(0.0, 1.0, 7.0)
-const BOT_SPAWN := Vector3(0.0, 1.0, -7.0)
+const SPAWN := Vector3(0.0, 0.02, Field.HALF_LENGTH*0.5)
+const ALLY_SPAWN := Vector3(-8.0, 0.02, Field.HALF_LENGTH*0.62)
+const BOT_SPAWN := Vector3(0.0, 0.02, -Field.HALF_LENGTH*0.5)
+const BOT2_SPAWN := Vector3(8.0, 0.02, -Field.HALF_LENGTH*0.62)
 const BALL_SPAWN := Vector3(0.0, 0.4, 0.0)
 
 var player: CharacterBody3D
 var bot: CharacterBody3D
+var ally: CharacterBody3D
+var enemy_second: CharacterBody3D
+var teammates: Array[CharacterBody3D] = []
+var opponents: Array[CharacterBody3D] = []
 var ball: RigidBody3D
 var camera: Camera3D
 var kick: Node3D
 var bot_kick: Node3D
 var bot_brain: Node
 var bot_input: RefCounted
+var ally_input: RefCounted
+var enemy_second_input: RefCounted
+var ai_brains: Array[Node] = []
+var ai_kicks: Array[Node3D] = []
 var hud: CanvasLayer
+var items: Node3D
 
 var player_score := 0
 var bot_score := 0
@@ -45,6 +58,7 @@ func _ready() -> void:
 	_build_bot_brain()
 	_build_goals()
 	_build_hud()
+	_build_items()
 
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	hud.show_banner("MEGA BATTLE FOOTBALL", Color(0.65, 0.9, 1.0))
@@ -52,49 +66,7 @@ func _ready() -> void:
 
 
 func _build_environment() -> void:
-	var world := WorldEnvironment.new()
-	var environment := Environment.new()
-	environment.background_mode = Environment.BG_SKY
-
-	var sky := Sky.new()
-	var sky_material := ProceduralSkyMaterial.new()
-	sky_material.sky_top_color = Color(0.03, 0.06, 0.13)
-	sky_material.sky_horizon_color = Color(0.18, 0.24, 0.38)
-	sky_material.ground_bottom_color = Color(0.02, 0.03, 0.05)
-	sky_material.ground_horizon_color = Color(0.12, 0.16, 0.26)
-	sky.sky_material = sky_material
-	environment.sky = sky
-
-	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color(0.88, 0.84, 0.95)
-	environment.ambient_light_energy = 0.65
-	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	environment.glow_enabled = true
-	environment.glow_intensity = 0.35
-	environment.glow_bloom = 0.04
-	environment.fog_enabled = true
-	environment.fog_light_color = Color(0.5, 0.39, 0.68)
-	environment.fog_density = 0.003
-	environment.ssao_enabled = true
-	environment.ssao_intensity = 1.4
-
-	world.environment = environment
-	add_child(world)
-
-	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-54.0, -42.0, 0.0)
-	sun.light_energy = 1.05
-	sun.light_color = Color(1.0, 0.96, 0.9)
-	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 90.0
-	add_child(sun)
-
-	var fill := OmniLight3D.new()
-	fill.position = Vector3(0, 12, 0)
-	fill.light_energy = 1.6
-	fill.omni_range = 40.0
-	fill.light_color = Color(0.55, 0.75, 1.0)
-	add_child(fill)
+	DayStadium.add_daylight(self)
 
 
 func _build_ball() -> void:
@@ -110,24 +82,52 @@ func _build_players() -> void:
 	player.character_look = OutfitStore.load_look(outfit_path)
 	player.body_color = Color(0.18, 0.62, 1.0)
 	player.position = SPAWN
+	player.team_id = 0
 	add_child(player)
 	player.input = InputHub.new()
 	player.ball = ball
+	ally = _make_ai_player("Ally",ALLY_SPAWN,0)
+	bot = _make_ai_player("Opponent",BOT_SPAWN,1)
+	enemy_second = _make_ai_player("Opponent2",BOT2_SPAWN,1)
+	teammates = [player,ally]
+	opponents = [bot,enemy_second]
+	for actor in [player,ally]:
+		actor.opponents = opponents
+		actor.opponent = bot
+	for actor in opponents:
+		actor.opponents = teammates
+		actor.opponent = player
 
-	bot = PlayerScript.new()
-	bot.name = "Bot"
-	bot.body_color = Color(0.92, 0.22, 0.25)
-	bot.character_look = load("res://assets/characters/pip.tres")
-	bot.position = BOT_SPAWN
-	bot.camera_relative = false
-	bot.speed_multiplier = 0.94
-	add_child(bot)
-	bot_input = BotInput.new()
-	bot.input = bot_input
-	bot.ball = ball
 
-	player.opponent = bot
-	bot.opponent = player
+func _make_ai_player(actor_name: String, spawn: Vector3, team: int) -> CharacterBody3D:
+	var actor := PlayerScript.new()
+	actor.name = actor_name
+	actor.team_id = team
+	actor.body_color = Color(0.94,0.2,0.42) if team == 1 else Color(0.18,0.75,0.95)
+	var team_look := load("res://assets/characters/pip.tres").duplicate() as Resource
+	team_look.set("display_name",actor_name.to_upper())
+	team_look.set("shirt_color",Color("ec328e") if team==1 else Color("16bce9"))
+	team_look.set("shirt_secondary_color",Color("ff9d49") if team==1 else Color("18345f"))
+	team_look.set("shorts_color",Color("342647"))
+	team_look.set("socks_color",Color("ffffff"))
+	team_look.set("boots_color",Color("ec328e") if team==1 else Color("16bce9"))
+	team_look.set("shirt_pattern",1)
+	actor.character_look = team_look
+	actor.position = spawn
+	actor.camera_relative = false
+	actor.speed_multiplier = 1.0
+	actor.position.y = 0.02
+	add_child(actor)
+	var actor_input := BotInput.new()
+	actor.input = actor_input
+	actor.ball = ball
+	if actor_name == "Ally":
+		ally_input = actor_input
+	elif actor_name == "Opponent":
+		bot_input = actor_input
+	else:
+		enemy_second_input = actor_input
+	return actor
 
 
 func _build_camera() -> void:
@@ -146,44 +146,57 @@ func _build_kicks() -> void:
 	kick.camera = camera
 	kick.ball = ball
 	kick.input = player.input
+	kick.teammates = [ally]
+	kick.team_id = 0
 	add_child(kick)
 	player.kick = kick
 	kick.kicked.connect(_on_player_kicked)
+	kick.passed.connect(_on_player_passed)
 
-	bot_kick = KickScript.new()
-	bot_kick.name = "BotKick"
-	bot_kick.player = bot
-	bot_kick.ball = ball
-	bot_kick.input = bot.input
-	bot_kick.show_preview = false
-	bot_kick.use_aim_override = true
-	add_child(bot_kick)
-	bot.kick = bot_kick
+	for actor in [ally,bot,enemy_second]:
+		var ai_kick := KickScript.new()
+		ai_kick.name = actor.name+"Kick"
+		ai_kick.player = actor
+		ai_kick.ball = ball
+		ai_kick.input = actor.input
+		ai_kick.show_preview = false
+		ai_kick.use_aim_override = true
+		add_child(ai_kick)
+		actor.kick = ai_kick
+		ai_kicks.append(ai_kick)
+	bot_kick = ai_kicks[1]
 
 
 func _build_bot_brain() -> void:
-	bot_brain = BotBrainScript.new()
-	bot_brain.name = "BotBrain"
-	bot_brain.body = bot
-	bot_brain.opponent = player
-	bot_brain.ball = ball
-	bot_brain.input = bot_input
-	bot_brain.attack_z = 16.0
-	bot_brain.own_z = -16.0
-	add_child(bot_brain)
+	for actor in [ally,bot,enemy_second]:
+		var brain := BotBrainScript.new()
+		brain.name = actor.name+"Brain"
+		brain.body = actor
+		brain.ball = ball
+		brain.input = actor.input
+		brain.team_id = actor.team_id
+		brain.teammates = [player,ally] if actor.team_id == 0 else [bot,enemy_second]
+		brain.opponents = [bot,enemy_second] if actor.team_id == 0 else [player,ally]
+		brain.attack_z = -Field.HALF_LENGTH if actor.team_id == 0 else Field.HALF_LENGTH
+		brain.own_z = Field.HALF_LENGTH if actor.team_id == 0 else -Field.HALF_LENGTH
+		add_child(brain)
+		ai_brains.append(brain)
+	bot_brain = ai_brains[1]
 
 
 func _build_goals() -> void:
 	var far_goal := GoalScript.new()
 	far_goal.name = "FarGoal"
-	far_goal.position = Vector3(0, 0, -16.0)
+	far_goal.position = Vector3(0, 0, -Field.HALF_LENGTH)
+	far_goal.add_to_group("preview_goals")
 	add_child(far_goal)
 	far_goal.scored.connect(_on_player_goal)
 
 	var near_goal := GoalScript.new()
 	near_goal.name = "NearGoal"
-	near_goal.position = Vector3(0, 0, 16.0)
+	near_goal.position = Vector3(0, 0, Field.HALF_LENGTH)
 	near_goal.rotation_degrees.y = 180.0
+	near_goal.add_to_group("preview_goals")
 	add_child(near_goal)
 	near_goal.scored.connect(_on_bot_goal)
 
@@ -196,7 +209,11 @@ func _build_hud() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	hud.inventory=items.inventory_for(player)
+	hud.boost_remaining=items.boost_remaining(player)
 	hud.charge = kick.charge
+	hud.aiming = kick.aiming
+	hud.charging = kick.charging
 	hud.sweet_hit = kick.charging and kick.charge >= kick.sweet_lo and kick.charge <= kick.sweet_hi
 	hud.stamina = player.stamina
 	hud.stamina_max = player.stamina_max
@@ -206,7 +223,7 @@ func _physics_process(delta: float) -> void:
 	hud.player_score = player_score
 	hud.bot_score = bot_score
 
-	if ball.global_position.y < -4.0 or absf(ball.global_position.z) > 26.0:
+	if ball.global_position.y < -4.0 or absf(ball.global_position.z) > Field.HALF_LENGTH + 4.0:
 		ball.reset_to(BALL_SPAWN)
 
 	if _pending_reset > 0.0:
@@ -242,12 +259,35 @@ func _on_player_kicked(_power: float, sweet: bool) -> void:
 		Juice.add_shake(0.2)
 
 
+func _on_player_passed(_power: float, _sweet: bool) -> void:
+	player.play_kick_animation()
+
+
 func _reset_round() -> void:
+	if items!=null:
+		items.reset_round()
 	ball.reset_to(BALL_SPAWN)
 	player.reset_at(SPAWN, Vector3(0.0, 0.0, -1.0))
+	ally.reset_at(ALLY_SPAWN, Vector3(0.0, 0.0, -1.0))
 	bot.reset_at(BOT_SPAWN, Vector3(0.0, 0.0, 1.0))
-	bot_brain.reset()
+	enemy_second.reset_at(BOT2_SPAWN, Vector3(0.0, 0.0, 1.0))
+	for brain in ai_brains:
+		brain.reset()
 	hud.charge = 0.0
+
+
+func _build_items() -> void:
+	items=ItemSystem.new()
+	items.ball=ball
+	items.local_actor=player
+	items.view_camera=camera
+	hud.weapon_system=items
+	items.aim_provider=func() -> Vector3: return Vector3(-sin(camera.yaw),0,-cos(camera.yaw))
+	add_child(items)
+	for actor in [player,ally,bot,enemy_second]:
+		items.register_actor(actor,actor.team_id)
+		actor.kick.inventory=items.inventory_for(actor)
+	hud.inventory=items.inventory_for(player)
 
 
 func _unhandled_input(event: InputEvent) -> void:

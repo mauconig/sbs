@@ -76,3 +76,9 @@ func item_held() -> bool:
 	if device < 0:
 		return Input.is_key_pressed(KEY_E)
 	return Input.is_joy_button_pressed(device, JOY_BUTTON_Y)
+
+
+func pass_aim_held() -> bool:
+	if device < 0:
+		return Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+	return Input.get_joy_axis(device, JOY_AXIS_TRIGGER_LEFT) > 0.4

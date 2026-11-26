@@ -6,12 +6,21 @@ extends Resource
 		display_name = value
 		emit_changed()
 @export var model_scene: PackedScene
+@export var hair_scene: PackedScene
+@export var cleats_scene: PackedScene
+@export var eye_color := Color("7344bd"):
+	set(value):
+		eye_color = value
+		emit_changed()
 @export_enum("Curly", "Spiky", "Swept", "Quiff") var hairstyle := 3
 @export var skin_color := Color(1, 0.66, 0.57, 1):
 	set(value):
 		skin_color = value
 		emit_changed()
-@export var hair := Color(0.25, 0.105, 0.105, 1)
+@export var hair := Color(0.25, 0.105, 0.105, 1):
+	set(value):
+		hair = value
+		emit_changed()
 @export var shirt_color := Color.WHITE:
 	set(value):
 		shirt_color = value

@@ -26,7 +26,7 @@ var _pivot := Vector3.ZERO
 func _ready() -> void:
 	fov = 68.0
 	near = 0.08
-	far = 220.0
+	far = 400.0
 	if target:
 		_pivot = target.global_position + Vector3(0.0, 1.5, 0.0)
 
@@ -35,10 +35,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		yaw = wrapf(yaw - event.relative.x * mouse_sensitivity, -PI, PI)
 		pitch = clampf(pitch + event.relative.y * 0.10, min_pitch, max_pitch)
-	elif event is InputEventMouseButton and event.pressed:
-		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+	elif event is InputEventKey and event.pressed:
+		if event.keycode == KEY_PAGEUP:
 			distance = clampf(distance - 0.6, min_distance, max_distance)
-		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+		elif event.keycode == KEY_PAGEDOWN:
 			distance = clampf(distance + 0.6, min_distance, max_distance)
 
 

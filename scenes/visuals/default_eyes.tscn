@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/characters/models/suspicious_stare_fitted.res" id="1_kq2m4"]
+[ext_resource type="ArrayMesh" path="res://assets/characters/models/suspicious_stare_brows.res" id="2_d0cwm"]
+
+[node name="MeshySuspiciousEyes" type="Node3D" unique_id=2100207656]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.28, 0)
+metadata/source_asset = "res://assets/characters/models/suspicious_stare_eyes.fbx"
+
+[node name="EyeSurfaces" type="MeshInstance3D" parent="." unique_id=1256994699]
+mesh = ExtResource("1_kq2m4")
+
+[node name="Eyebrows" type="MeshInstance3D" parent="." unique_id=1394248689]
+mesh = ExtResource("2_d0cwm")

@@ -7,7 +7,7 @@ const TrailScript := preload("res://scripts/ball_trail.gd")
 @export var radius := 0.22
 @export var ball_mass := 0.44
 @export var curve_decay := 5.0
-@export var ground_friction := 6.0
+@export var ground_friction := 1.8
 @export var full_white := false
 
 var curve_strength := 0.0
@@ -24,7 +24,7 @@ func _ready() -> void:
 	linear_damp = 0.04
 	angular_damp = 0.35
 	collision_layer = 4
-	collision_mask = 1 | 2
+	collision_mask = 1 | 2 | 32
 	_build_visuals()
 	_build_physics_material()
 
@@ -169,6 +169,17 @@ func drive_controlled(direction: Vector3, right: Vector3, carrier_velocity: Vect
 	linear_velocity.y = lerpf(linear_velocity.y,clampf(error.y*14.0,-2.0,1.2),blend)
 	var rolling := (Vector3.UP.cross(Vector3(linear_velocity.x,0.0,linear_velocity.z))/radius).limit_length(36.0)
 	angular_velocity = angular_velocity.lerp(rolling,1.0-exp(-delta*18.0))
+
+
+func drive_keeper(keeper: Node3D, delta: float) -> void:
+	if carrier != keeper:
+		return
+	var direction: Vector3 = keeper.get("facing")
+	var target := keeper.global_position + Vector3.UP * 0.92 + direction * 0.34
+	var blend := 1.0 - exp(-delta * 32.0)
+	global_position = global_position.lerp(target, blend)
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
 
 
 func release_from(player: Node3D) -> void:

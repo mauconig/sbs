@@ -2,8 +2,12 @@ extends CanvasLayer
 ## Sandbox HUD: charge meter with sweet spot, stamina bar, counters, banners.
 
 const PainterScript := preload("res://scripts/ui/hud_painter.gd")
+const Scoreboard := preload("res://scripts/ui/scoreboard.gd")
+const InventoryHud := preload("res://scripts/ui/item_inventory_hud.gd")
 
 var charge := 0.0
+var aiming := false
+var charging := false
 var sweet_lo := 0.80
 var sweet_hi := 0.95
 var sweet_hit := false
@@ -15,9 +19,13 @@ var tackle_ready := 1.0
 var player_score := 0
 var bot_score := 0
 var shots := 0
+var weapon_system: Node3D
+var inventory: RefCounted
+var boost_remaining := 0.0
+var _inventory_hud: Control
 
 var _painter: Control
-var _stats: Label
+var _scoreboard: Control
 var _banner: Label
 var _hint: Label
 var _banner_tween: Tween
@@ -29,12 +37,12 @@ func _ready() -> void:
 	_painter = PainterScript.new()
 	_painter.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_painter.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_painter.set("hud", self)
 	add_child(_painter)
 
-	_stats = _make_label(26, Color(0.95, 0.97, 1.0))
-	_stats.position = Vector2(34, 26)
-	add_child(_stats)
+	_scoreboard = Scoreboard.new()
+	add_child(_scoreboard)
+	_inventory_hud=InventoryHud.new()
+	add_child(_inventory_hud)
 
 	_banner = _make_label(104, Color(1.0, 0.85, 0.3))
 	_banner.modulate.a = 0.0
@@ -42,7 +50,7 @@ func _ready() -> void:
 	add_child(_banner)
 
 	_hint = _make_label(15, Color(0.62, 0.72, 0.86))
-	_hint.text = "WASD run | SHIFT sprint | SPACE jump | CTRL sweep | mouse look | wheel zoom | hold LMB to charge, A/D curve | F2 reset | ESC free/lock mouse"
+	_hint.text = "WASD move | SHIFT sprint | SPACE hop / keeper dive | CTRL sweep | RMB aim | LMB shoot / pass | 1-3 / SCROLL slots | F drop | PGUP/DN zoom | F2 reset"
 	_hint.position = Vector2(34, 0)
 	add_child(_hint)
 
@@ -69,8 +77,12 @@ func show_banner(text: String, color: Color = Color(1.0, 0.85, 0.3)) -> void:
 
 
 func _process(_delta: float) -> void:
+	_inventory_hud.set("weapon_system",weapon_system)
+	_inventory_hud.set("inventory",inventory)
+	_inventory_hud.set("boost_remaining",boost_remaining)
 	var view := get_viewport().get_visible_rect().size
-	_stats.text = "YOU  %d  —  %d  BOT" % [player_score, bot_score]
+	_scoreboard.set("blue_score",player_score)
+	_scoreboard.set("pink_score",bot_score)
 
 	_banner.size = _banner.get_minimum_size()
 	_banner.position = Vector2(view.x * 0.5 - _banner.size.x * 0.5, view.y * 0.2)
@@ -78,4 +90,8 @@ func _process(_delta: float) -> void:
 	_hint.size = _hint.get_minimum_size()
 	_hint.position = Vector2(34, view.y - 42)
 
-	_painter.queue_redraw()
+	_painter.set("energy",stamina/maxf(stamina_max,1.0))
+	_painter.set("charge",charge)
+	_painter.set("power_visible",aiming or charging)
+	_painter.set("sweet_lo",sweet_lo)
+	_painter.set("sweet_hi",sweet_hi)

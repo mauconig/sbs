@@ -1,0 +1,17 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/characters/models/neon_cleat_left.res" id="1_oopd6"]
+[ext_resource type="ArrayMesh" path="res://assets/characters/models/neon_cleat_right.res" id="2_njnpu"]
+
+[node name="NeonCleats" type="Node3D" unique_id=1928957439]
+metadata/source_asset = "res://assets/characters/models/neon_cleat.fbx"
+
+[node name="LeftCleat" type="Node3D" parent="." unique_id=209607076]
+
+[node name="CleatGeometry" type="MeshInstance3D" parent="LeftCleat" unique_id=1288329564]
+mesh = ExtResource("1_oopd6")
+
+[node name="RightCleat" type="Node3D" parent="." unique_id=1396864827]
+
+[node name="CleatGeometry" type="MeshInstance3D" parent="RightCleat" unique_id=711257490]
+mesh = ExtResource("2_njnpu")

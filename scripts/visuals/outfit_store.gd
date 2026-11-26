@@ -3,7 +3,7 @@ extends RefCounted
 
 const SAVE_PATH := "user://player_outfit.cfg"
 const BASE_LOOK := preload("res://assets/characters/pip.tres")
-const KEYS := ["display_name","number","skin_color","print_color",
+const KEYS := ["display_name","number","skin_color","eye_color","hair","print_color",
 	"shirt_color","shorts_color","socks_color","boots_color",
 	"shirt_secondary_color","shorts_secondary_color","socks_secondary_color","boots_secondary_color",
 	"shirt_pattern","shorts_pattern","socks_pattern","boots_pattern"]

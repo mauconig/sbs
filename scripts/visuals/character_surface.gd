@@ -7,6 +7,8 @@ static func apply(node: Node, look: Resource, print_texture: Texture2D = null) -
 
 
 static func _apply_parts(node: Node, look: Resource, materials: Dictionary, print_texture: Texture2D) -> void:
+	if node.get_meta("character_face_part", false):
+		return
 	if node is MeshInstance3D:
 		for surface in node.mesh.get_surface_count():
 			var source := node.mesh.surface_get_material(surface) as StandardMaterial3D
@@ -33,9 +35,11 @@ static func _apply_parts(node: Node, look: Resource, materials: Dictionary, prin
 			material.set_shader_parameter("shorts_color",look.shorts_color)
 			material.set_shader_parameter("socks_color",look.socks_color)
 			material.set_shader_parameter("boots_color",look.boots_color)
+			material.set_shader_parameter("hair_color",look.hair)
 			material.set_shader_parameter("shorts",1.0 if "Shorts" in label else 0.0)
 			material.set_shader_parameter("socks",1.0 if "Socks" in label else 0.0)
 			material.set_shader_parameter("boots",1.0 if "Boots" in label else 0.0)
+			material.set_shader_parameter("cleat",1.0 if "Cleat" in label else 0.0)
 			material.set_shader_parameter("pattern_mode",0)
 			for part in ["shirt","shorts","socks","boots"]:
 				if part.to_lower() in label.to_lower():

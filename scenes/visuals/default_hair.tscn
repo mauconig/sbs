@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/characters/models/cocoa_hair_authored.glb" id="1_authored"]
+
+[node name="CocoaHair" type="Node3D" unique_id=2065825564]
+metadata/source_asset = "res://assets/characters/models/cocoa_hair.fbx"
+metadata/blender_source = "res://art/characters/cocoa_hair_fit.blend"
+
+[node name="HairGeometry" parent="." unique_id=1590699128 instance=ExtResource("1_authored")]

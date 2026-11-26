@@ -5,6 +5,21 @@ const MovementTuning := preload("res://scripts/movement_tuning.gd")
 
 const AuthoredSurface := preload("res://scripts/visuals/character_surface.gd")
 const ShirtPrint := preload("res://scripts/visuals/shirt_print.gd")
+const BazookaVisual := preload("res://scripts/visuals/bazooka_visual.gd")
+const Ragdoll := preload("res://scripts/visuals/character_ragdoll.gd")
+const FacePaint := preload("res://scripts/visuals/face_paint.gd")
+const MeshSmoothing := preload("res://scripts/visuals/mesh_smoothing.gd")
+const CostumeAssembly := preload("res://scripts/visuals/costume_assembly.gd")
+signal ragdoll_finished(position: Vector3)
+var bazooka: Node3D
+var ragdoll: Node3D
+## Eyes, brows and mouth are painted on the skin shader, not separate meshes.
+var face_paint: Node
+var costume_assembly: Node3D
+var ragdoll_active: bool:
+	get: return ragdoll!=null and ragdoll.active
+var _motion_rig: Node3D
+var _ragdoll_recovering := 0.0
 
 @export var look: Resource
 @export_enum("Idle", "Run", "Jump", "Kick", "Celebrate", "Sweep", "Walk", "Charge", "Dive", "MovingKick", "Knockdown") var animation := 0
@@ -67,10 +82,14 @@ func _refresh_surface() -> void:
 	if is_instance_valid(_model_root):
 		_shirt_print.call("set_identity",look.display_name,look.number)
 		AuthoredSurface.apply(_model_root,look,_shirt_print.get_texture())
+	if face_paint!=null and look!=null:
+		face_paint.eye_color=look.eye_color
+		face_paint.refresh()
 
 
 func _load_authored_model(scene: PackedScene) -> void:
 	var motion_rig := Node3D.new()
+	_motion_rig=motion_rig
 	motion_rig.name = "ModelMotionRig"
 	add_child(motion_rig)
 	var model := scene.instantiate() as Node3D
@@ -79,6 +98,7 @@ func _load_authored_model(scene: PackedScene) -> void:
 	# The Meshy FBX faces Blender's +Y axis; rotate it to this project's -Z front.
 	model.rotation.y = PI
 	model.scale = Vector3.ONE * model_scale
+	MeshSmoothing.apply(model)
 	_shirt_print = ShirtPrint.new()
 	add_child(_shirt_print)
 	_refresh_surface()
@@ -136,11 +156,31 @@ func _load_authored_model(scene: PackedScene) -> void:
 	for eye in eyes:
 		_eye_rest_scales.append(eye.scale)
 	mouth = model.find_child("Mouth",true,false) as Node3D
+	var skeleton := model.find_child("Skeleton3D",true,false) as Skeleton3D
+	if skeleton!=null:
+		face_paint=FacePaint.new()
+		face_paint.name="PaintedFace"
+		add_child(face_paint)
+		face_paint.setup(skeleton,model,look.eye_color)
+		costume_assembly=CostumeAssembly.new()
+		costume_assembly.name="MeshyCostume"
+		add_child(costume_assembly)
+		costume_assembly.setup(skeleton,model,look)
+		bazooka=BazookaVisual.new()
+		add_child(bazooka)
+		bazooka.setup(self,skeleton)
+		ragdoll=Ragdoll.new()
+		add_child(ragdoll)
+		ragdoll.setup(skeleton)
+		ragdoll.finished.connect(func(at: Vector3): ragdoll_finished.emit(at))
+		_refresh_surface()
 
 
 func apply_expression(value: int) -> void:
 	expression = value
 	_face_expression = value
+	if face_paint!=null:
+		face_paint.set_expression(value)
 	for index in brows.size():
 		var side := -1.0 if index == 0 else 1.0
 		brows[index].rotation.z = side * (0.35 if _authored_model and value==2 else 0.19 if value == 2 else -0.1)
@@ -161,6 +201,8 @@ func apply_expression(value: int) -> void:
 
 
 func play(value: int) -> void:
+	if ragdoll_active or _ragdoll_recovering>0.0:
+		return
 	if animation == value:
 		return
 	animation = value
@@ -197,7 +239,9 @@ func _play_model_animation() -> void:
 	if _animation_player == null:
 		return
 	_animation_player.speed_scale = animation_speed
-	if animation == 5 and sweep_duration_override > 0.0 and not _slide_animation.is_empty():
+	if animation in [1,6]:
+		_animation_player.speed_scale *= MovementTuning.LOCOMOTION_ANIMATION_RATE
+	elif animation == 5 and sweep_duration_override > 0.0 and not _slide_animation.is_empty():
 		# Reach the end of the slide when travel stops; play the get-up at rest.
 		var length := _animation_player.get_animation(_slide_animation).length
 		var elapsed := action_time/maxf(animation_speed,0.1)
@@ -274,12 +318,19 @@ func _process(delta: float) -> void:
 
 
 func advance_animation(delta: float) -> void:
+	if ragdoll_active:
+		return
+	if _ragdoll_recovering>0.0:
+		_ragdoll_recovering=maxf(0.0,_ragdoll_recovering-delta)
+		return
 	time += delta * animation_speed
 	action_time += delta * animation_speed
 	_pose(delta)
 
 
 func _pose(_delta: float) -> void:
+	if ragdoll_active or _ragdoll_recovering>0.0:
+		return
 	if _previous_animation != animation:
 		action_time = 0.0
 		_previous_animation = animation
@@ -388,5 +439,42 @@ func _pose(_delta: float) -> void:
 	# Small asynchronous blinks keep the idle faces alive.
 	var blink_time := fmod(t,4.7)
 	var blink := 1.0 - sin(clampf((blink_time-4.48)/0.17,0.0,1.0)*PI)*0.92 if blink_time>4.48 else 1.0
+	if face_paint!=null:
+		face_paint.set_blink(blink)
 	for index in eyes.size():
 		eyes[index].scale.y = _eye_rest_scales[index].y*blink*(0.98 if _authored_model and _face_expression==2 else 0.87 if _face_expression==2 else 1.08 if _face_expression==3 else 1.0)
+
+
+func start_ragdoll(launch_velocity: Vector3) -> void:
+	if ragdoll==null:
+		return
+	if ragdoll_active:
+		for body in ragdoll.bodies:
+			body.linear_velocity=(body.linear_velocity+launch_velocity*0.35).limit_length(28.0)
+		return
+	_animation_player.pause()
+	_ragdoll_recovering=0.0
+	var world := _motion_rig.global_transform
+	_motion_rig.top_level=true
+	_motion_rig.global_transform=world
+	ragdoll.start(launch_velocity)
+
+
+func restore_after_ragdoll(get_up: bool = true) -> void:
+	if ragdoll!=null:
+		ragdoll.stop()
+	_motion_rig.top_level=false
+	_motion_rig.transform=Transform3D.IDENTITY
+	ragdoll.skeleton.reset_bone_poses()
+	if get_up and not _knockdown_animation.is_empty():
+		_ragdoll_recovering=0.45
+		animation=10
+		_previous_animation=10
+		var clip := _animation_player.get_animation(_knockdown_animation)
+		_animation_player.play(_knockdown_animation,0.12)
+		_animation_player.seek(clip.length*0.75,true)
+		_animation_player.speed_scale=clip.length*0.25/0.45
+	else:
+		_ragdoll_recovering=0.0
+		play(0)
+		_pose(0.0)
